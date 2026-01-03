@@ -2,9 +2,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
+// 告诉 TypeScript process 是存在的（Vite 会在构建时替换它）
+declare const process: {
+  env: {
+    API_KEY: string;
+  };
+};
+
 // Analyze audio emotion using Gemini 3 Pro model for high-quality reasoning
 export const analyzeAudioEmotion = async (base64Data: string, mimeType: string): Promise<AnalysisResult> => {
-  // Always create a new instance right before making an API call to ensure it uses the most up-to-date API key
+  // Always create a new instance right before making an API call
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const response = await ai.models.generateContent({
@@ -51,6 +58,6 @@ export const analyzeAudioEmotion = async (base64Data: string, mimeType: string):
     }
   });
 
-  const text = response.text.trim();
+  const text = response.text || "{}";
   return JSON.parse(text) as AnalysisResult;
 };
