@@ -41,12 +41,20 @@ const App: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 检查 API Key 状态
   const checkKeyStatus = async () => {
-    try {
-      const status = await window.aistudio?.hasSelectedApiKey();
-      setHasKey(!!status);
-    } catch (e) {
-      setHasKey(false);
+    // 优先检查 AI Studio 环境
+    if (window.aistudio) {
+      try {
+        const status = await window.aistudio.hasSelectedApiKey();
+        setHasKey(!!status);
+      } catch (e) {
+        setHasKey(false);
+      }
+    } else {
+      // 在腾讯云部署环境下，检查 Vite 构建时是否注入了 API_KEY
+      const isEnvKeyValid = !!process.env.API_KEY && process.env.API_KEY !== "";
+      setHasKey(isEnvKeyValid);
     }
   };
 
@@ -55,8 +63,12 @@ const App: React.FC = () => {
   }, []);
 
   const handleConnectKey = async () => {
-    await window.aistudio?.openSelectKey();
-    setHasKey(true);
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setHasKey(true);
+    } else {
+      alert("当前为独立部署环境。请在构建项目时通过环境变量设置 API_KEY。");
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,8 +98,12 @@ const App: React.FC = () => {
   const processBatch = async () => {
     if (isProcessing) return;
     if (!hasKey) {
-      const confirmed = window.confirm("检测到未连接 API KEY。现在去连接吗？");
-      if (confirmed) await handleConnectKey();
+      if (window.aistudio) {
+        const confirmed = window.confirm("检测到未连接 API KEY。现在去连接吗？");
+        if (confirmed) await handleConnectKey();
+      } else {
+        alert("未检测到有效的 API_KEY。请检查部署环境配置。");
+      }
       return;
     }
 
@@ -111,11 +127,6 @@ const App: React.FC = () => {
         } : f));
       } catch (error: any) {
         console.error("Analysis Error:", error);
-        if (error.message?.includes("Requested entity was not found")) {
-          setHasKey(false);
-          alert("连接已失效，请重新连接您的项目。");
-          break;
-        }
         setFiles(prev => prev.map(f => f.id === audioFile.id ? { 
           ...f, 
           status: EmotionStatus.FAILED,
@@ -146,23 +157,14 @@ const App: React.FC = () => {
 
   const getLevelColor = (level: number) => {
     const colors = [
-      'bg-emerald-400', // 1
-      'bg-emerald-500', // 2
-      'bg-green-500',   // 3
-      'bg-lime-500',    // 4
-      'bg-yellow-400',  // 5
-      'bg-amber-500',   // 6
-      'bg-orange-500',  // 7
-      'bg-orange-600',  // 8
-      'bg-red-500',     // 9
-      'bg-rose-600'     // 10
+      'bg-emerald-400', 'bg-emerald-500', 'bg-green-500', 'bg-lime-500', 'bg-yellow-400',
+      'bg-amber-500', 'bg-orange-500', 'bg-orange-600', 'bg-red-500', 'bg-rose-600'
     ];
     return colors[Math.max(0, Math.min(level - 1, 9))];
   };
 
   return (
     <div className="max-w-[1280px] mx-auto px-6 py-8 flex flex-col min-h-screen antialiased bg-slate-50/50">
-      {/* 顶部标题栏 */}
       <header className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
@@ -177,24 +179,23 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
-            onClick={handleConnectKey}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-              hasKey 
-              ? 'bg-white text-emerald-600 border-emerald-100 shadow-sm' 
-              : 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
-            }`}
-          >
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
+            hasKey 
+            ? 'bg-white text-emerald-600 border-emerald-100 shadow-sm' 
+            : 'bg-amber-50 text-amber-700 border-amber-200'
+          }`}>
             {hasKey ? <ShieldCheckIcon className="w-4 h-4" /> : <KeyIcon className="w-4 h-4" />}
-            {hasKey ? '云端连接成功' : '连接 API'}
-          </button>
+            {hasKey ? 'API 连接正常' : '未连接 API'}
+          </div>
+          {window.aistudio && (
+             <button onClick={handleConnectKey} className="text-xs text-blue-600 font-bold hover:underline">切换 Key</button>
+          )}
           <button onClick={() => setShowTip(!showTip)} className="text-slate-400 hover:text-blue-600 p-2 hover:bg-white rounded-full transition-colors">
             <QuestionMarkCircleIcon className="w-5 h-5" />
           </button>
         </div>
       </header>
 
-      {/* 介绍卡片 - 优化为浅色调 */}
       <div className="bg-white border border-slate-200 rounded-3xl p-8 mb-8 shadow-sm relative overflow-hidden group">
         <div className="absolute -top-12 -right-12 p-12 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
           <CpuChipIcon className="w-64 h-64 text-blue-600" />
@@ -206,7 +207,7 @@ const App: React.FC = () => {
               Next-Gen Audio Intelligence
             </div>
             <p className="text-slate-600 text-base leading-relaxed font-medium">
-              基于 <span className="text-blue-600 font-bold">Gemini 原生多模态音频理解能力</span>，Sonic Lab 绕过传统的语音转文字流程，直接通过声学物理特征——如音调、语流节奏、共鸣感及细微的情感波动，深度解析音频背后的真实情绪底色。我们致力于为创作者提供最精准、最具深度感的语音数据资产解析与标注能力。
+              基于 <span className="text-blue-600 font-bold">Gemini 原生多模态音频理解能力</span>，Sonic Lab 直接通过声学特征深度解析音频背后的真实情绪底色。我们致力于提供最精准、最具深度感的语音标注能力。
             </p>
           </div>
           <div className="flex gap-8 border-l border-slate-100 pl-8 h-full items-center shrink-0">
@@ -226,13 +227,11 @@ const App: React.FC = () => {
         <div className="bg-white border-l-4 border-blue-500 p-4 rounded-xl mb-8 text-sm text-slate-600 flex gap-4 animate-in slide-in-from-top-4 duration-300 shadow-sm">
           <InformationCircleIcon className="w-5 h-5 text-blue-500 shrink-0" />
           <p>
-            <b className="text-slate-900">操作指引：</b> 批量上传音频后点击“开始AI批量解析”。系统将自动为您提取音轨背后的角色画像与情绪梯度。
-            <br/>强度配色：系统采用 <span className="font-bold text-emerald-600">1-10级全色域阶梯</span>，颜色越趋向深红，代表音频中的情绪张力越强。
+            <b className="text-slate-900">操作指引：</b> 批量上传音频后点击“开始AI批量解析”。系统采用 1-10 级全色域阶梯，颜色越深代表情绪张力越强。
           </p>
         </div>
       )}
 
-      {/* 核心操作区 */}
       <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm mb-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <input type="file" multiple accept="audio/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
@@ -277,7 +276,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* 表格数据 - 优化容器高度和列宽 */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col overflow-hidden min-h-[500px]">
         {files.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-300 py-40">
@@ -351,7 +349,6 @@ const App: React.FC = () => {
                           <p className="text-[11px] text-slate-400 line-clamp-2 italic leading-relaxed">
                             {file.reasoning}
                           </p>
-                          {/* 悬浮框组件 */}
                           <div className={`invisible group-hover/popover:visible opacity-0 group-hover/popover:opacity-100 absolute ${index < files.length - 2 ? 'top-full mt-2' : 'bottom-full mb-2'} left-0 w-80 p-5 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[100] transition-all duration-200 pointer-events-auto`}>
                             <div className="text-[10px] font-black text-blue-600 uppercase mb-3 border-b border-blue-50 pb-2 flex justify-between items-center tracking-widest">
                               <span>AI 听感分析报告</span>
@@ -370,7 +367,6 @@ const App: React.FC = () => {
                                 <><ClipboardDocumentIcon className="w-4 h-4" /> 复制分析全文</>
                               )}
                             </button>
-                            <div className={`absolute left-4 w-3 h-3 bg-white border-slate-200 transform rotate-45 ${index < files.length - 2 ? '-top-1.5 border-l border-t' : '-bottom-1.5 border-r border-b'}`}></div>
                           </div>
                         </div>
                       ) : <span className="text-[11px] text-slate-200 font-medium">就绪，等待智能解析</span>}
