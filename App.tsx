@@ -33,6 +33,13 @@ declare global {
   }
 }
 
+// 解决 TS 找不到 process 的问题
+declare const process: {
+  env: {
+    API_KEY: string;
+  };
+};
+
 const App: React.FC = () => {
   const [files, setFiles] = useState<AudioFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -52,8 +59,8 @@ const App: React.FC = () => {
         setHasKey(false);
       }
     } else {
-      // 在腾讯云部署环境下，检查 Vite 构建时是否注入了 API_KEY
-      const isEnvKeyValid = !!process.env.API_KEY && process.env.API_KEY !== "";
+      // 在腾讯云部署环境下
+      const isEnvKeyValid = typeof process !== 'undefined' && !!process.env.API_KEY;
       setHasKey(isEnvKeyValid);
     }
   };
@@ -67,7 +74,7 @@ const App: React.FC = () => {
       await window.aistudio.openSelectKey();
       setHasKey(true);
     } else {
-      alert("当前为独立部署环境。请在构建项目时通过环境变量设置 API_KEY。");
+      alert("当前为独立部署环境。请在腾讯云 EdgeOne 后台的环境变量中设置 API_KEY。");
     }
   };
 
@@ -102,7 +109,7 @@ const App: React.FC = () => {
         const confirmed = window.confirm("检测到未连接 API KEY。现在去连接吗？");
         if (confirmed) await handleConnectKey();
       } else {
-        alert("未检测到有效的 API_KEY。请检查部署环境配置。");
+        alert("未检测到有效的 API_KEY。请在部署环境配置环境变量。");
       }
       return;
     }
@@ -207,7 +214,7 @@ const App: React.FC = () => {
               Next-Gen Audio Intelligence
             </div>
             <p className="text-slate-600 text-base leading-relaxed font-medium">
-              基于 <span className="text-blue-600 font-bold">Gemini 原生多模态音频理解能力</span>，Sonic Lab 直接通过声学特征深度解析音频背后的真实情绪底色。我们致力于提供最精准、最具深度感的语音标注能力。
+              基于 <span className="text-blue-600 font-bold">Gemini 原生多模态音频理解能力</span>，Sonic Lab 直接通过声学特征深度解析音频背后的真实情绪底色。
             </p>
           </div>
           <div className="flex gap-8 border-l border-slate-100 pl-8 h-full items-center shrink-0">
@@ -222,15 +229,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {showTip && (
-        <div className="bg-white border-l-4 border-blue-500 p-4 rounded-xl mb-8 text-sm text-slate-600 flex gap-4 animate-in slide-in-from-top-4 duration-300 shadow-sm">
-          <InformationCircleIcon className="w-5 h-5 text-blue-500 shrink-0" />
-          <p>
-            <b className="text-slate-900">操作指引：</b> 批量上传音频后点击“开始AI批量解析”。系统采用 1-10 级全色域阶梯，颜色越深代表情绪张力越强。
-          </p>
-        </div>
-      )}
 
       <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm mb-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -265,11 +263,10 @@ const App: React.FC = () => {
             <ArrowDownTrayIcon className="w-4 h-4" />
             导出数据
           </button>
-          <div className="w-px h-6 bg-slate-100"></div>
           <button 
             onClick={clearAll}
             disabled={files.length === 0 || isProcessing}
-            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all disabled:opacity-0"
+            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
           >
             <TrashIcon className="w-5 h-5" />
           </button>
@@ -279,103 +276,45 @@ const App: React.FC = () => {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex-1 flex flex-col overflow-hidden min-h-[500px]">
         {files.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-300 py-40">
-            <div className="p-6 bg-slate-50 rounded-full mb-6">
-              <SpeakerWaveIcon className="w-12 h-12 opacity-20" />
-            </div>
-            <p className="text-sm font-bold tracking-widest uppercase">请导入音频文件开始解析任务</p>
+            <SpeakerWaveIcon className="w-12 h-12 opacity-20 mb-4" />
+            <p className="text-sm font-bold uppercase tracking-widest">请导入音频文件开始</p>
           </div>
         ) : (
           <div className="flex-1 overflow-auto">
-            <table className="w-full text-left table-fixed border-collapse">
-              <thead className="sticky top-0 z-20">
-                <tr className="bg-white border-b border-slate-100">
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] w-[20%]">文件名</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] w-[100px]">状态</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] w-[120px]">情绪标签</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] w-[100px] text-center">强度</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] w-[160px]">音色/角色</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">AI 深度洞察</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] w-[60px]"></th>
+            <table className="w-full text-left table-fixed">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-[25%]">文件名</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-[120px]">状态</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-[120px]">情绪标签</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">AI 分析</th>
+                  <th className="px-6 py-4 w-[60px]"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {files.map((file, index) => (
-                  <tr key={file.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-5">
+                  <tr key={file.id} className="hover:bg-slate-50/30">
+                    <td className="px-6 py-4">
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-bold text-slate-700 truncate mb-1" title={file.name}>
-                          {file.name}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono tracking-tighter uppercase">{file.size}</span>
+                        <span className="text-sm font-bold text-slate-700 truncate">{file.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{file.size}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-4">
                       <StatusChip status={file.status} />
                     </td>
-                    <td className="px-6 py-5">
-                      {file.emotionType ? (
-                        <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 text-[11px] font-black rounded-lg border border-blue-100/50">
-                          {file.emotionType}
+                    <td className="px-6 py-4">
+                      {file.emotionType && (
+                        <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded border border-blue-100">
+                          {file.emotionType} ({file.emotionLevel})
                         </span>
-                      ) : <span className="text-slate-200">--</span>}
+                      )}
                     </td>
-                    <td className="px-6 py-5">
-                      {file.emotionLevel ? (
-                        <div className="flex flex-col items-center gap-1.5">
-                          <span className={`text-[11px] font-black leading-none ${file.emotionLevel >= 8 ? 'text-rose-600' : file.emotionLevel >= 5 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                            {file.emotionLevel}
-                          </span>
-                          <div className="w-full max-w-[50px] h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/40 relative">
-                            <div 
-                              className={`absolute top-0 left-0 h-full ${getLevelColor(file.emotionLevel)} transition-all duration-700`}
-                              style={{ width: `${file.emotionLevel * 10}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      ) : <span className="text-slate-200">--</span>}
+                    <td className="px-6 py-4">
+                      <p className="text-[11px] text-slate-500 line-clamp-2">{file.reasoning || '--'}</p>
                     </td>
-                    <td className="px-6 py-5">
-                      {file.voiceIdentity ? (
-                        <div className="flex items-center gap-2 text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200/40">
-                          <UserIcon className="w-3.5 h-3.5 opacity-40 shrink-0" />
-                          <span className="font-bold truncate" title={file.voiceIdentity}>{file.voiceIdentity}</span>
-                        </div>
-                      ) : <span className="text-slate-200">--</span>}
-                    </td>
-                    <td className="px-6 py-5">
-                      {file.reasoning ? (
-                        <div className="relative group/popover flex items-center gap-2 cursor-default">
-                          <InformationCircleIcon className="w-5 h-5 text-blue-400 shrink-0" />
-                          <p className="text-[11px] text-slate-400 line-clamp-2 italic leading-relaxed">
-                            {file.reasoning}
-                          </p>
-                          <div className={`invisible group-hover/popover:visible opacity-0 group-hover/popover:opacity-100 absolute ${index < files.length - 2 ? 'top-full mt-2' : 'bottom-full mb-2'} left-0 w-80 p-5 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[100] transition-all duration-200 pointer-events-auto`}>
-                            <div className="text-[10px] font-black text-blue-600 uppercase mb-3 border-b border-blue-50 pb-2 flex justify-between items-center tracking-widest">
-                              <span>AI 听感分析报告</span>
-                              <SparklesIcon className="w-3.5 h-3.5" />
-                            </div>
-                            <p className="text-[12px] text-slate-600 leading-relaxed font-semibold mb-5">
-                              {file.reasoning}
-                            </p>
-                            <button 
-                              onClick={() => copyToClipboard(file.reasoning!, file.id)}
-                              className="w-full flex items-center justify-center gap-2 py-2 bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-100 rounded-xl text-[11px] font-black transition-all"
-                            >
-                              {copiedId === file.id ? (
-                                <><CheckIcon className="w-4 h-4 text-emerald-500" /> 分析已存入剪贴板</>
-                              ) : (
-                                <><ClipboardDocumentIcon className="w-4 h-4" /> 复制分析全文</>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      ) : <span className="text-[11px] text-slate-200 font-medium">就绪，等待智能解析</span>}
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button 
-                        onClick={() => removeFile(file.id)}
-                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                      >
+                    <td className="px-6 py-4 text-right">
+                      <button onClick={() => removeFile(file.id)} className="text-slate-300 hover:text-red-500">
                         <TrashIcon className="w-4 h-4" />
                       </button>
                     </td>
@@ -386,40 +325,18 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
-
-      <footer className="mt-auto py-10 flex flex-col items-center gap-4">
-        <div className="flex gap-8 items-center">
-          <div className="flex flex-col items-center">
-            <span className="text-xl font-black text-slate-900 leading-none">{files.length}</span>
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">总文件</span>
-          </div>
-          <div className="w-px h-6 bg-slate-200"></div>
-          <div className="flex flex-col items-center">
-            <span className="text-xl font-black text-blue-600 leading-none">{files.filter(f => f.status === EmotionStatus.COMPLETED).length}</span>
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">已完成</span>
-          </div>
-        </div>
-        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em] opacity-40">
-          SONIC LAB ENGINE • SYSTEM STABLE
-        </p>
-      </footer>
     </div>
   );
 };
 
 const StatusChip: React.FC<{ status: EmotionStatus }> = ({ status }) => {
-  const base = "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase border whitespace-nowrap";
+  const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase border";
   switch (status) {
-    case EmotionStatus.IDLE:
-      return <span className={`${base} bg-slate-50 text-slate-400 border-slate-100`}>等待中</span>;
-    case EmotionStatus.PROCESSING:
-      return <span className={`${base} bg-blue-50 text-blue-600 border-blue-100 shadow-sm shadow-blue-50/50`}><ArrowPathIcon className="w-3 h-3 animate-spin" />解析中</span>;
-    case EmotionStatus.COMPLETED:
-      return <span className={`${base} bg-emerald-50 text-emerald-600 border-emerald-100`}><CheckCircleIcon className="w-3 h-3" />已完成</span>;
-    case EmotionStatus.FAILED:
-      return <span className={`${base} bg-rose-50 text-rose-600 border-rose-100`}><XCircleIcon className="w-3 h-3" />解析失败</span>;
-    default:
-      return null;
+    case EmotionStatus.IDLE: return <span className={`${base} bg-slate-50 text-slate-400 border-slate-100`}>等待中</span>;
+    case EmotionStatus.PROCESSING: return <span className={`${base} bg-blue-50 text-blue-600 border-blue-100 animate-pulse`}>分析中</span>;
+    case EmotionStatus.COMPLETED: return <span className={`${base} bg-emerald-50 text-emerald-600 border-emerald-100`}>已完成</span>;
+    case EmotionStatus.FAILED: return <span className={`${base} bg-rose-50 text-rose-600 border-rose-100`}>失败</span>;
+    default: return null;
   }
 };
 
