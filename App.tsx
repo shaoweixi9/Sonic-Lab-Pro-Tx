@@ -214,7 +214,7 @@ const App: React.FC = () => {
               Next-Gen Audio Intelligence
             </div>
             <p className="text-slate-600 text-base leading-relaxed font-medium">
-              基于 <span className="text-blue-600 font-bold">Gemini 原生多模态音频理解能力</span>，Sonic Lab 直接通过声学特征深度解析音频背后的真实情绪底色。
+              基于 <span className="text-blue-600 font-bold">Gemini 原生多模态音频理解能力</span>，Sonic Lab 绕过传统的语音转文字流程，直接通过声学物理特征——如音调、语流节奏、共鸣感及细微的情感波动，深度解析音频背后的真实情绪底色。我们致力于为创作者提供最精准、最具深度感的语音数据资产解析与标注能力。
             </p>
           </div>
           <div className="flex gap-8 border-l border-slate-100 pl-8 h-full items-center shrink-0">
