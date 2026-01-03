@@ -2,7 +2,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// 为 TypeScript 声明 process 变量，防止 tsc 报错
+// 为 TypeScript 声明 process 变量
 declare const process: {
   env: {
     API_KEY?: string;
@@ -12,12 +12,16 @@ declare const process: {
 
 export default defineConfig({
   plugins: [react()],
+  // 关键修复：使用相对路径，确保在任何 URL 深度下都能正确找到 JS/CSS
+  base: './',
   define: {
-    // 确保构建时将环境变量注入到前端代码中
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY)
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || '')
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
+    assetsDir: 'assets',
+    sourcemap: false,
+    // 确保清理旧文件
+    emptyOutDir: true,
   }
 });
