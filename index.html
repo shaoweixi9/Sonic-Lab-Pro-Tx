@@ -5,11 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SONIC LAB | 语音情绪实验室</title>
-    <!-- 引入 Tailwind CDN，解决图标过大和样式失效问题 -->
+    <!-- 引入 Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script>
-      // 配置 Tailwind CDN 使用你的自定义字体
       tailwind.config = {
         theme: {
           extend: {
@@ -38,12 +37,6 @@
         .soft-shadow {
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
         }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 <script type="importmap">
 {
@@ -58,10 +51,10 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <!-- 注意这里改为相对路径 ./index.tsx -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
